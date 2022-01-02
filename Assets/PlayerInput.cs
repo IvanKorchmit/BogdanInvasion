@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 
-class PlayerInput : MonoBehaviour, IPointerClickHandler
+class PlayerInput : MonoBehaviour
 {
-    public delegate InputInfo OnPlayerInputDelegate();
+    public delegate void OnPlayerInputDelegate(InputInfo info);
     public static event OnPlayerInputDelegate OnPlayerInput;
     [SerializeField] float doubleClickTime = 0.3f;
     [SerializeField] int clicks;
@@ -13,13 +13,18 @@ class PlayerInput : MonoBehaviour, IPointerClickHandler
     {
         if (time > 0 && clicks >= 2 && !triggered)
         {
-            Debug.Log("Double clicked");
+            OnDoubleClick();
             triggered = true;
         }
         else if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             time = doubleClickTime;
             clicks++;
+            if (clicks == 1)
+            {
+                OnSingleClick();
+
+            }
         }
         else if (time < 0)
         {
@@ -30,8 +35,25 @@ class PlayerInput : MonoBehaviour, IPointerClickHandler
         time -= Time.deltaTime;
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    private void OnSingleClick()
     {
-        throw new System.NotImplementedException();
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, LayerMask.GetMask("Unit")))
+        {
+            if(hit.collider.TryGetComponent(out ISelectable selectable))
+            {
+                selectable.OnSelect();
+            }
+        }
+    }
+    private void OnDoubleClick()
+    {
+
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue,LayerMask.GetMask("Obstacle")))
+        {
+            OnPlayerInput?.Invoke(new InputInfo(hit.point,InputInfo.CommandType.Move));
+
+        }
     }
 }
